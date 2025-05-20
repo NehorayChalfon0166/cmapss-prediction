@@ -21,9 +21,9 @@ df = pandas.read_csv('train_FD001.txt', sep='\s+', header=None,
 # print(df.info())
 
 # Display descriptive statistics
-for i in range(21):
-    print(f"sensor{i+1}:")
-    print(df[f"sensor_{i+1}"].describe())
+# for i in range(21):
+#     print(f"sensor{i+1}:")
+#     print(df[f"sensor_{i+1}"].describe())
 
 # Check for missing values
 # print("\nMissing Values:")
