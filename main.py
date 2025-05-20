@@ -24,25 +24,24 @@ df_reduced = df.drop(to_remove, axis=1)
 
 # feature engineering
 # Sensors to calculate rolling statistics for
-# selected_sensors = ['sensor_2', 'sensor_7', 'sensor_7']
-# window_size = 10
+selected_sensors = [column for column in df_reduced if 'sensor' in column]
+window_size = 10
 # Group by unit_id and calculate rolling statistics
-# rolling_features = []
-# for sensor in selected_sensors:
-#     rolling_mean = df.groupby('unit_id')[sensor].rolling(window=window_size, min_periods=1).mean().reset_index(level=0, drop=True)
-#     rolling_std = df.groupby('unit_id')[sensor].rolling(window=window_size, min_periods=1).std().reset_index(level=0, drop=True)
-#     # Replace NaN values in rolling_std with 0
-#     rolling_std = rolling_std.fillna(0)
+rolling_features = []
+for sensor in selected_sensors:
+    rolling_mean = df.groupby('unit_id')[sensor].rolling(window=window_size, min_periods=1).mean().reset_index(level=0, drop=True)
+    rolling_std = df.groupby('unit_id')[sensor].rolling(window=window_size, min_periods=1).std().reset_index(level=0, drop=True)
+    # Replace NaN values in rolling_std with 0
+    rolling_std = rolling_std.fillna(0)
     
-#     # Add new features to the DataFrame
-#     df[f'{sensor}_rolling_mean_{window_size}'] = rolling_mean
-#     df[f'{sensor}_rolling_std_{window_size}'] = rolling_std
+    # Add new features to the DataFrame
+    df[f'{sensor}_rolling_mean_{window_size}'] = rolling_mean
+    df[f'{sensor}_rolling_std_{window_size}'] = rolling_std
+
 
 # Calculate the maximum cycle for each unit_id
 max_cycle_per_unit = df_reduced.groupby('unit_id')['cycle'].max()
-
 # Create the RUL column using a vectorized approach
 df_reduced['RUL'] = df_reduced['unit_id'].map(max_cycle_per_unit) - df_reduced['cycle']
-
 # Print the first few rows of df_reduced with the new RUL column
 print(df_reduced.head())
