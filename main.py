@@ -1,6 +1,9 @@
 import pandas
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
 
 df = pandas.read_csv('train_FD001.txt', sep='\s+', header=None,
                     names=['unit_id', 'cycle', 'op_setting_1', 'op_setting_2', 'op_setting_3',
@@ -76,6 +79,13 @@ def sequential_split(df: pandas.DataFrame, test_size=0.2):
       return train_df, test_df
 
 train_df, test_df = sequential_split(df_reduced)
+
+x_train = train_df.drop(columns=['unit_id', 'cycle', 'RUL'])
+y_train = train_df['RUL']
+x_test = test_df.drop(columns=['unit_id', 'cycle', 'RUL'])
+y_test = test_df['RUL']
+
+
 columns_to_scale = ['op_setting_1', 'op_setting_2', 'op_setting_3',
                   'sensor_2', 'sensor_3', 'sensor_4', 'sensor_7',
                   'sensor_14', 'sensor_15', 'sensor_17', 'sensor_20',
@@ -88,20 +98,24 @@ columns_to_scale = ['op_setting_1', 'op_setting_2', 'op_setting_3',
                   'sensor_17_rolling_mean_10', 'sensor_17_rolling_std_10', 
                   'sensor_20_rolling_mean_10', 'sensor_20_rolling_std_10']
 
-# Define scaler
-scaler = StandardScaler()
-
-# Create (not yet) scaled versions of the DataFrames
-train_df_scaled = train_df.copy()
-test_df_scaled = test_df.copy()
-
-# Scale the specified columns
-train_df_scaled[columns_to_scale] = scaler.fit_transform(train_df[columns_to_scale])
-test_df_scaled[columns_to_scale] = scaler.transform(test_df[columns_to_scale])
-
 preprocessor = ColumnTransformer(
      transformers=[
           ('scaler', StandardScaler(), columns_to_scale)
      ],
      remainder='passthrough'
 )
+
+pipeline = Pipeline([
+     ('preprocessing', preprocessor),
+     ("regressor", LinearRegression())
+])
+
+pipeline.fit(x_train, y_train)
+y_pred = pipeline.predict(x_test)
+
+# Evaluate
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f'MSE = {mse:.2f}')
+print(f'R² score = {r2:.4f}')
