@@ -1,11 +1,12 @@
-import pandas
+import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
 
-df = pandas.read_csv('train_FD001.txt', sep='\s+', header=None,
+df = pd.read_csv('train_FD001.txt', sep='\s+', header=None,
                     names=['unit_id', 'cycle', 'op_setting_1', 'op_setting_2', 'op_setting_3',
                           'sensor_1', 'sensor_2', 'sensor_3', 'sensor_4', 'sensor_5',
                           'sensor_6', 'sensor_7', 'sensor_8', 'sensor_9', 'sensor_10',
@@ -57,26 +58,22 @@ This leads to unrealistic and overly optimistic performance estimates.
 Instead, we need to use a sequential split.
 This means that for each unit_id, we take the earlier cycles for training and the later cycles for testing.
 """
-def sequential_split(df: pandas.DataFrame, test_size=0.2):
-      train_list = []
-      test_list = []
-
-      # Group by unit_id
-      grouped = df.groupby('unit_id')
-
-      for unit_id, group in grouped:
-            cycle_split = group['cycle'].quantile(1-test_size)
-            # Split the data into training and testing sets
-            train_data = group[group['cycle'] <= cycle_split]
-            test_data = group[group['cycle'] > cycle_split]
-            train_list.append(train_data)
-            test_list.append(test_data)
-
-      # Concatenate all unit_id groups to form the final train and test DataFrames
-      train_df = pandas.concat(train_list, axis=0)
-      test_df = pandas.concat(test_list, axis=0)
-
-      return train_df, test_df
+def sequential_split(df: pd.DataFrame, test_size=0.2):
+    # Get the unique unit_ids
+    unique_unit_ids = df['unit_id'].unique()
+    
+    # Determine the split point
+    split_index = int(len(unique_unit_ids) * (1 - test_size))
+    
+    # Split the unit_ids into training and testing sets
+    train_unit_ids = unique_unit_ids[:split_index]
+    test_unit_ids = unique_unit_ids[split_index:]
+    
+    # Create training and testing DataFrames
+    train_df = df[df['unit_id'].isin(train_unit_ids)]
+    test_df = df[df['unit_id'].isin(test_unit_ids)]
+    
+    return train_df, test_df
 
 train_df, test_df = sequential_split(df_reduced)
 
@@ -107,7 +104,7 @@ preprocessor = ColumnTransformer(
 
 pipeline = Pipeline([
      ('preprocessing', preprocessor),
-     ("regressor", LinearRegression())
+     ("regressor", RandomForestRegressor())
 ])
 
 pipeline.fit(x_train, y_train)
@@ -117,5 +114,16 @@ y_pred = pipeline.predict(x_test)
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
+print("\nTraining set RUL statistics:")
+print(y_train.describe())
+print("\nTest set RUL statistics:")
+print(y_test.describe())
 print(f'MSE = {mse:.2f}')
 print(f'R² score = {r2:.4f}')
+import matplotlib.pyplot as plt
+plt.scatter(y_test, y_pred, alpha=0.5)
+plt.xlabel("Actual RUL")
+plt.ylabel("Predicted RUL")
+plt.title("Predicted vs Actual RUL")
+plt.grid(True)
+plt.show()
