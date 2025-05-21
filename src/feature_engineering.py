@@ -1,4 +1,6 @@
 # filepath: src/feature_engineering.py
+import pandas as pd
+
 def add_rolling_features(df: pd.DataFrame, features: list, window: int) -> pd.DataFrame:
     df_out = df.copy()
     for f in features:

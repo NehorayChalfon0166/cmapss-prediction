@@ -5,6 +5,7 @@ from src.feature_engineering import add_rolling_features, calculate_rul
 from src.model import build_pipeline
 from src.evaluation import evaluate
 from src.visualization import plot_results
+import pandas as pd
 
 def main():
     print("=== Training Phase ===")
