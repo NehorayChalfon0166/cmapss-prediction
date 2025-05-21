@@ -5,125 +5,156 @@ from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
-
-df = pd.read_csv('train_FD001.txt', sep='\s+', header=None,
-                    names=['unit_id', 'cycle', 'op_setting_1', 'op_setting_2', 'op_setting_3',
-                          'sensor_1', 'sensor_2', 'sensor_3', 'sensor_4', 'sensor_5',
-                          'sensor_6', 'sensor_7', 'sensor_8', 'sensor_9', 'sensor_10',
-                          'sensor_11', 'sensor_12', 'sensor_13', 'sensor_14', 'sensor_15',
-                          'sensor_16', 'sensor_17', 'sensor_18', 'sensor_19', 'sensor_20',
-                          'sensor_21'])
-
-
-### feature extraction
-# from data exloration i saw that sensors 1, 5, 6, 10, 16, 18, 19
-# are basiccly constants so have little to no effect
-# and 'sensor_11','sensor_12','sensor_8','sensor_13','sensor_9' have strong correlations and can be removed
-low_variance = ['sensor_1', 'sensor_5', 'sensor_6', 'sensor_10',
-            'sensor_16','sensor_18','sensor_19']
-
-strong_correlation = ['sensor_11','sensor_12','sensor_8','sensor_13','sensor_9', 'sensor_21']
-
-to_remove = low_variance + strong_correlation
-df_reduced = df.drop(to_remove, axis=1)
-
-
-# feature engineering
-# Sensors to calculate rolling statistics for
-selected_sensors = [column for column in df_reduced if 'sensor' in column]
-window_size = 10
-# Group by unit_id and calculate rolling statistics
-rolling_features = []
-for sensor in selected_sensors:
-    rolling_mean = df_reduced.groupby('unit_id')[sensor].rolling(window=window_size, min_periods=1).mean().reset_index(level=0, drop=True)
-    rolling_std = df_reduced.groupby('unit_id')[sensor].rolling(window=window_size, min_periods=1).std().reset_index(level=0, drop=True)
-    # Replace NaN values in rolling_std with 0
-    rolling_std = rolling_std.fillna(0)
-    
-    # Add new features to the DataFrame
-    df_reduced[f'{sensor}_rolling_mean_{window_size}'] = rolling_mean
-    df_reduced[f'{sensor}_rolling_std_{window_size}'] = rolling_std
-
-# Calculate the maximum cycle for each unit_id
-max_cycle_per_unit = df_reduced.groupby('unit_id')['cycle'].max()
-# Create the RUL column using a vectorized approach
-df_reduced['RUL'] = df_reduced['unit_id'].map(max_cycle_per_unit) - df_reduced['cycle']
-
-
-### model training
-"""When splitting time series data, we cannot use a random split (like train_test_split with shuffle=True).
-This would introduce "future" information into the training set,
-as data from later cycles would be used to predict earlier cycles.
-This leads to unrealistic and overly optimistic performance estimates.
-Instead, we need to use a sequential split.
-This means that for each unit_id, we take the earlier cycles for training and the later cycles for testing.
-"""
-def sequential_split(df: pd.DataFrame, test_size=0.2):
-    # Get the unique unit_ids
-    unique_unit_ids = df['unit_id'].unique()
-    
-    # Determine the split point
-    split_index = int(len(unique_unit_ids) * (1 - test_size))
-    
-    # Split the unit_ids into training and testing sets
-    train_unit_ids = unique_unit_ids[:split_index]
-    test_unit_ids = unique_unit_ids[split_index:]
-    
-    # Create training and testing DataFrames
-    train_df = df[df['unit_id'].isin(train_unit_ids)]
-    test_df = df[df['unit_id'].isin(test_unit_ids)]
-    
-    return train_df, test_df
-
-train_df, test_df = sequential_split(df_reduced)
-
-x_train = train_df.drop(columns=['unit_id', 'cycle', 'RUL'])
-y_train = train_df['RUL']
-x_test = test_df.drop(columns=['unit_id', 'cycle', 'RUL'])
-y_test = test_df['RUL']
-
-
-columns_to_scale = ['op_setting_1', 'op_setting_2', 'op_setting_3',
-                  'sensor_2', 'sensor_3', 'sensor_4', 'sensor_7',
-                  'sensor_14', 'sensor_15', 'sensor_17', 'sensor_20',
-                  'sensor_2_rolling_mean_10', 'sensor_2_rolling_std_10',
-                  'sensor_3_rolling_mean_10', 'sensor_3_rolling_std_10', 
-                  'sensor_4_rolling_mean_10', 'sensor_4_rolling_std_10', 
-                  'sensor_7_rolling_mean_10', 'sensor_7_rolling_std_10', 
-                  'sensor_14_rolling_mean_10', 'sensor_14_rolling_std_10', 
-                  'sensor_15_rolling_mean_10', 'sensor_15_rolling_std_10', 
-                  'sensor_17_rolling_mean_10', 'sensor_17_rolling_std_10', 
-                  'sensor_20_rolling_mean_10', 'sensor_20_rolling_std_10']
-
-preprocessor = ColumnTransformer(
-     transformers=[
-          ('scaler', StandardScaler(), columns_to_scale)
-     ],
-     remainder='passthrough'
-)
-
-pipeline = Pipeline([
-     ('preprocessing', preprocessor),
-     ("regressor", RandomForestRegressor())
-])
-
-pipeline.fit(x_train, y_train)
-y_pred = pipeline.predict(x_test)
-
-# Evaluate
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
-
-print("\nTraining set RUL statistics:")
-print(y_train.describe())
-print("\nTest set RUL statistics:")
-print(y_test.describe())
-print(f'MSE = {mse:.2f}')
-print(f'R² score = {r2:.4f}')
 import matplotlib.pyplot as plt
-plt.scatter(y_test, y_pred, alpha=0.5)
-plt.xlabel("Actual RUL")
-plt.ylabel("Predicted RUL")
-plt.title("Predicted vs Actual RUL")
-plt.grid(True)
-plt.show()
+import numpy as np
+# ----------------------------------------
+# Configuration
+# ----------------------------------------
+
+# File paths
+train_path = 'train_FD001.txt'
+test_path = 'test_FD001.txt'
+rul_path = 'RUL_FD001.txt'
+
+WINDOW_SIZE = 10
+RUL_CAP = 125
+
+# Sensors identified for removal
+LOW_VARIANCE_SENSORS = ['sensor_1', 'sensor_5', 'sensor_6', 'sensor_10', 'sensor_16', 'sensor_18', 'sensor_19']
+HIGHLY_CORRELATED_SENSORS = ['sensor_11', 'sensor_12', 'sensor_8', 'sensor_13', 'sensor_9', 'sensor_21']
+TO_REMOVE = LOW_VARIANCE_SENSORS + HIGHLY_CORRELATED_SENSORS
+
+# Sensors for scaling
+COLUMNS_TO_SCALE = [
+    'op_setting_1', 'op_setting_2', 'op_setting_3',
+    'sensor_2', 'sensor_3', 'sensor_4', 'sensor_7',
+    'sensor_14', 'sensor_15', 'sensor_17', 'sensor_20'
+]
+
+# ----------------------------------------
+# Functions
+# ----------------------------------------
+
+def load_data(path: str) -> pd.DataFrame:
+    # Define the expected column names
+    columns = ['unit_id', 'cycle', 'op_setting_1', 'op_setting_2', 'op_setting_3'] + \
+              [f'sensor_{i}' for i in range(1, 22)]
+    return pd.read_csv(path, sep='\s+', header=None, names=columns)
+
+
+def remove_irrelevant_sensors(df: pd.DataFrame) -> pd.DataFrame:
+    return df.drop(columns=TO_REMOVE)
+
+
+def add_rolling_features(df: pd.DataFrame, sensors: list, window: int) -> pd.DataFrame:
+    for sensor in sensors:
+        rolling_mean = df.groupby('unit_id')[sensor].rolling(window, min_periods=1).mean().reset_index(level=0, drop=True)
+        rolling_std = df.groupby('unit_id')[sensor].rolling(window, min_periods=1).std().reset_index(level=0, drop=True).fillna(0)
+        df[f'{sensor}_rolling_mean_{window}'] = rolling_mean
+        df[f'{sensor}_rolling_std_{window}'] = rolling_std
+    return df
+
+
+def calculate_rul(df: pd.DataFrame, cap_value: int = None) -> pd.DataFrame:
+    max_cycle = df.groupby('unit_id')['cycle'].max()
+    df['RUL'] = df['unit_id'].map(max_cycle) - df['cycle']
+    if cap_value is not None:
+        df['RUL'] = df['RUL'].clip(upper=cap_value)
+    return df
+
+
+def sequential_split(df: pd.DataFrame, test_size=0.2):
+      train_list = []
+      test_list = []
+
+      # Group by unit_id
+      grouped = df.groupby('unit_id')
+
+      for unit_id, group in grouped:
+            cycle_split = group['cycle'].quantile(1-test_size)
+            # Split the data into training and testing sets
+            train_data = group[group['cycle'] <= cycle_split]
+            test_data = group[group['cycle'] > cycle_split]
+            train_list.append(train_data)
+            test_list.append(test_data)
+
+      # Concatenate all unit_id groups to form the final train and test DataFrames
+      train_df = pd.concat(train_list, axis=0)
+      test_df = pd.concat(test_list, axis=0)
+
+      return train_df, test_df
+
+
+def build_pipeline(columns_to_scale: list) -> Pipeline:
+    extended_columns = columns_to_scale.copy()
+    for col in columns_to_scale:
+        if 'sensor' in col:
+            extended_columns += [f"{col}_rolling_mean_{WINDOW_SIZE}", f"{col}_rolling_std_{WINDOW_SIZE}"]
+    preprocessor = ColumnTransformer(
+        transformers=[('scaler', StandardScaler(), extended_columns)],
+        remainder='passthrough'
+    )
+
+    return Pipeline([
+        ('preprocessing', preprocessor),
+        ('regressor', RandomForestRegressor(random_state=42))
+    ])
+
+
+def evaluate(y_true, y_pred):
+    mse = mean_squared_error(y_true, y_pred)
+    rmse = np.sqrt(mse)
+    r2 = r2_score(y_true, y_pred)
+    print(f'MSE = {mse:.2f}')
+    print(f'RMSE = {rmse:.2f}') # RMSE is often more interpretable
+    print(f'R² score = {r2:.4f}')
+    return mse, r2, rmse
+
+
+def plot_results(y_true, y_pred):
+    plt.scatter(y_true, y_pred, alpha=0.5)
+    plt.xlabel("Actual RUL")
+    plt.ylabel("Predicted RUL")
+    plt.title("Predicted vs Actual RUL")
+    plt.grid(True)
+    plt.show()
+
+
+# ----------------------------------------
+# Main pipeline
+# ----------------------------------------
+
+def main():
+    # Load and preprocess data
+    train_df = load_data(train_path)
+    train_df = remove_irrelevant_sensors(train_df)
+    sensor_cols = [col for col in train_df.columns if 'sensor_' in col]
+    df_train_processed  = add_rolling_features(train_df, sensor_cols, WINDOW_SIZE)
+    df_train_processed  = calculate_rul(df_train_processed, cap_value=RUL_CAP)
+
+    # Separate features and target
+    x_train = df_train_processed.drop(columns=['unit_id', 'cycle', 'RUL'])
+    y_train = df_train_processed['RUL']
+
+    # Build and train pipeline
+    pipeline = build_pipeline(COLUMNS_TO_SCALE)
+    pipeline.fit(x_train, y_train)
+    
+    test_df = load_data(test_path)  # Load all matching datasets
+    train_df = remove_irrelevant_sensors(train_df)
+    df_train_processed  = add_rolling_features(train_df, sensor_cols, WINDOW_SIZE)
+    x_test = 
+    # Evaluate and visualize
+    print("\nTraining set RUL statistics:")
+    print(y_train.describe())
+    print("\nTest set RUL statistics:")
+    print(y_test.describe())
+    evaluate(y_test, y_pred)
+    plot_results(y_test, y_pred)
+
+# ----------------------------------------
+# Run
+# ----------------------------------------
+
+if __name__ == '__main__':
+    main()

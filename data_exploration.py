@@ -13,21 +13,21 @@ df = pandas.read_csv('train_FD001.txt', sep='\s+', header=None,
                           'sensor_21'])
 
 # Display the first few rows
-# print("First 5 rows of the dataset:")
-# print(df.head())
+print("First 5 rows of the dataset:")
+print(df.head())
 
 # Display dataset information
-# print("\nDataset Info:")
-# print(df.info())
+print("\nDataset Info:")
+print(df.info())
 
 # Display descriptive statistics
-# for i in range(21):
-#     print(f"sensor{i+1}:")
-#     print(df[f"sensor_{i+1}"].describe())
+for i in range(21):
+    print(f"sensor{i+1}:")
+    print(df[f"sensor_{i+1}"].describe())
 
 # Check for missing values
-# print("\nMissing Values:")
-# print(df.isnull().sum())
+print("\nMissing Values:")
+print(df.isnull().sum())
 
 
 # Correlation heatmap
@@ -52,7 +52,7 @@ df = pandas.read_csv('train_FD001.txt', sep='\s+', header=None,
 
 # Select a few engines to visualize
 # engines_to_plot = [1, 2, 3]  # Replace with desired engine IDs
-# # Iterate over each engine
+# Iterate over each engine
 # for engine_id in engines_to_plot:
 #     engine_data = df[df['unit_id'] == engine_id]
     
@@ -73,27 +73,27 @@ df = pandas.read_csv('train_FD001.txt', sep='\s+', header=None,
 #     plt.show()
 
 # Sensors to remove
-# to_remove = ['sensor_1', 'sensor_5', 'sensor_10', 'sensor_16', 'sensor_18', 'sensor_19']
+to_remove = ['sensor_1', 'sensor_5', 'sensor_10', 'sensor_16', 'sensor_18', 'sensor_19']
 
-# # Drop the columns to remove
-# df_filtered = df.drop(columns=to_remove)
+# Drop the columns to remove
+df_filtered = df.drop(columns=to_remove)
 
 # Calculate and print the correlation matrix
-# correlation_matrix = df.corr() # to change to df_filtered
+correlation_matrix = df.corr() # to change to df_filtered
 
 # Find pairs with correlation above 0.8
-# threshold = 0.8
-# high_corr_pairs = []
+threshold = 0.8
+high_corr_pairs = []
 
-# for i in range(len(correlation_matrix.columns)):
-#     for j in range(i + 1, len(correlation_matrix.columns)):  # Avoid duplicate pairs
-#         if abs(correlation_matrix.iloc[i, j]) > threshold:
-#             high_corr_pairs.append((correlation_matrix.columns[i], correlation_matrix.columns[j], correlation_matrix.iloc[i, j]))
+for i in range(len(correlation_matrix.columns)):
+    for j in range(i + 1, len(correlation_matrix.columns)):  # Avoid duplicate pairs
+        if abs(correlation_matrix.iloc[i, j]) > threshold:
+            high_corr_pairs.append((correlation_matrix.columns[i], correlation_matrix.columns[j], correlation_matrix.iloc[i, j]))
 
-# # Print the pairs with high correlation
-# print(f"Pairs with correlation above 0.8:{len(high_corr_pairs)}")
-# for pair in high_corr_pairs:
-#     print(f"{pair[0]} and {pair[1]}: {pair[2]:.2f}")
+# Print the pairs with high correlation
+print(f"Pairs with correlation above 0.8:{len(high_corr_pairs)}")
+for pair in high_corr_pairs:
+    print(f"{pair[0]} and {pair[1]}: {pair[2]:.2f}")
 
 
 # Optional: Visualize the correlation matrix
