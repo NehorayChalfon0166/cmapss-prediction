@@ -1,6 +1,7 @@
+from config.config import get_config, COLUMN_NAMES
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
 import os
 
 def load_dataset(file_path, column_names):
@@ -50,22 +51,27 @@ def plot_sensor_distributions(df, sensor_columns, output_dir=None):
             plt.savefig(os.path.join(output_dir, f'{sensor}_distribution.png'))
         plt.show()
 
-def main():
-    # Define file paths and parameters
-    file_path = 'data/train_FD001.txt'
-    column_names = ['unit_id', 'cycle', 'op_setting_1', 'op_setting_2', 'op_setting_3'] + \
-                   [f'sensor_{i}' for i in range(1, 22)]
-    output_dir = 'exploration_outputs'
-    correlation_threshold = 0.8
+def explore_dataset(dataset_name):
+    """Explore the dataset by summarizing, plotting correlations, and distributions."""
+    config = get_config(dataset_name)
+    if not config:
+        print(f"Dataset {dataset_name} not found in configuration.")
+        return
 
-    # Load and summarize the dataset
-    df = load_dataset(file_path, column_names)
+    output_dir = f"exploration_outputs/{dataset_name}"
+    os.makedirs(output_dir, exist_ok=True)
+
+    print(f"Exploring dataset: {dataset_name}")
+    df = load_dataset(config["TRAIN_PATH"], COLUMN_NAMES)
+
+    # Summarize the dataset
     summarize_dataset(df)
 
     # Plot correlation matrix
     plot_correlation_matrix(df, output_dir)
 
     # Find and print highly correlated features
+    correlation_threshold = 0.8
     high_corr_pairs = find_highly_correlated_features(df, threshold=correlation_threshold)
     print(f"\nPairs with correlation above {correlation_threshold}: {len(high_corr_pairs)}")
     for pair in high_corr_pairs:
@@ -76,4 +82,12 @@ def main():
     plot_sensor_distributions(df, sensor_columns, output_dir)
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if len(sys.argv) < 2:
+        print("Usage: python data_exploration.py <dataset_name1> <dataset_name2> ...")
+        print("Example: python data_exploration.py FD001 FD002")
+    else:
+        dataset_names = sys.argv[1:]
+        for dataset_name in dataset_names:
+            print(f"\n=== Processing {dataset_name} ===")
+            explore_dataset(dataset_name)
