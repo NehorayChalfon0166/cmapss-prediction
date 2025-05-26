@@ -58,7 +58,8 @@ def explore_dataset(dataset_name):
         print(f"Dataset {dataset_name} not found in configuration.")
         return
 
-    output_dir = f"exploration_outputs/{dataset_name}"
+    # Create a dedicated output directory for the dataset
+    output_dir = os.path.join("exploration_outputs", dataset_name)
     os.makedirs(output_dir, exist_ok=True)
 
     print(f"Exploring dataset: {dataset_name}")
