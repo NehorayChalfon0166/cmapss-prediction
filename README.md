@@ -149,14 +149,6 @@ The project can be primarily interacted with via `main.py`, which offers an inte
 
 To use the interactive menu, run `main.py` without any arguments:
 
-```bash
-python main.py
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-IGNORE_WHEN_COPYING_END
-
 You will be presented with the following options:
 
 Train Models: Select this to train models. You'll be prompted to enter comma-separated dataset names (e.g., FD001,FD002).
@@ -172,12 +164,6 @@ Command-Line Interface (CLI)
 You can also run specific tasks directly from the command line:
 
 python main.py <mode> <dataset_name1> [<dataset_name2> ...]
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
 
 <mode>: Specifies the operation to perform.
 
@@ -186,46 +172,17 @@ IGNORE_WHEN_COPYING_END
 Modes of Operation
 
 train: Trains a model for each specified dataset and saves it to models/<dataset_name>_model.pkl.
-
-python main.py train FD001 FD003
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
-
 evaluate: Loads a pre-trained model for each specified dataset, predicts RUL on its test set, and prints evaluation metrics (MSE, RMSE, R²), then displays a predicted vs. actual RUL plot.
-
-python main.py evaluate FD001
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
-
 explore: Runs exploratory data analysis for each specified dataset. This includes printing summary statistics, and generating/saving correlation heatmaps and sensor distribution plots to exploration_outputs/<dataset_name>/.
 
-python main.py explore FD001 FD002
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
 
 Note on Standalone EDA Script:
 The EDA logic resides in src/data_exploration.py. While main.py provides a convenient way to trigger it, you can also run it directly (e.g., for development or specific analysis on one dataset) if you navigate to the src directory or adjust Python's path:
 
 # From the project root directory
 python -m src.data_exploration FD001
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-Bash
-IGNORE_WHEN_COPYING_END
+
+
 Methodology
 
 Configuration Loading: For a given dataset (e.g., FD001), its specific configuration (file paths, sensors to remove, columns to scale) is loaded from config/config.py.
@@ -291,13 +248,3 @@ Dynamic Sensor Selection: Implement automated methods for selecting relevant sen
 Error Analysis: Perform a more in-depth analysis of prediction errors to understand where the model performs poorly (e.g., for specific units, or at different stages of degradation).
 
 Improved Test Set Handling: Explore using more of the test set history for prediction if applicable models (like LSTMs) are used, rather than just the last cycle.
-
-License
-
-This project is unlicensed. (Or specify your license, e.g., MIT License).
-
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-IGNORE_WHEN_COPYING_END
