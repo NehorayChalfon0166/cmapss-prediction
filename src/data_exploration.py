@@ -84,6 +84,7 @@ def explore_dataset(dataset_name):
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 2:
+        print("Error: not enough arguments!")
         print("Usage: python data_exploration.py <dataset_name1> <dataset_name2> ...")
         print("Example: python data_exploration.py FD001 FD002")
     else:

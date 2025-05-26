@@ -106,12 +106,11 @@ if __name__ == "__main__":
     else:
         mode = sys.argv[1]
         dataset_names = sys.argv[2:]
-
+        if mode not in ["train", "predict"]:
+            raise ValueError(f"Invalid mode: {mode}. Use 'train' or 'predict'.")
         for dataset_name in dataset_names:
             print(f"\n=== Processing {dataset_name} ===")
             if mode == "train":
                 train_and_evaluate(dataset_name)
             elif mode == "predict":
                 predict_with_saved_model(dataset_name)
-            else:
-                print(f"Invalid mode: {mode}. Use 'train' or 'predict'.")
