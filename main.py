@@ -1,5 +1,5 @@
 # filepath: main.py
-from config.config import *
+from config.config import DATASETS, get_config, WINDOW_SIZE, RUL_CAP
 from src.data_processing import load_data, remove_irrelevant_sensors
 from src.feature_engineering import add_rolling_features, calculate_rul
 from src.model import build_pipeline
@@ -35,11 +35,7 @@ def load_model(dataset_name):
 def train_and_evaluate(dataset_name):
     """Train and evaluate the model for a specific dataset."""
     config = get_config(dataset_name)
-    if not config:
-        print(f"Dataset {dataset_name} not found in configuration.")
-        return
-
-    print(f"=== Training Phase for {dataset_name} ===")
+    print(f"\n=== Training Model for Dataset: {dataset_name} ===")
     train = load_data(config["TRAIN_PATH"])
     train = remove_irrelevant_sensors(train, config["TO_REMOVE"])
     sensor_cols = [col for col in config["COLUMNS_TO_SCALE"] if 'sensor' in col]
@@ -55,7 +51,7 @@ def train_and_evaluate(dataset_name):
     # Save the trained model
     save_model(pipeline, dataset_name)
 
-    print(f"=== Test Phase for {dataset_name} ===")
+    print(f"\n=== Testing Model for Dataset: {dataset_name} ===")
     test = load_data(config["TEST_PATH"])
     test = remove_irrelevant_sensors(test, config["TO_REMOVE"])
     test = add_rolling_features(test, sensor_cols, WINDOW_SIZE)
@@ -64,7 +60,7 @@ def train_and_evaluate(dataset_name):
 
     y_pred = pipeline.predict(x_test)
 
-    print(f"=== Evaluation Phase for {dataset_name} ===")
+    print(f"\n=== Evaluating Model for Dataset: {dataset_name} ===")
     y_true = pd.read_csv(config["RUL_PATH"], sep='\s+', header=None, names=['RUL'])['RUL'].clip(upper=RUL_CAP)
 
     if len(y_pred) != len(y_true):
@@ -77,16 +73,11 @@ def train_and_evaluate(dataset_name):
 def predict_with_saved_model(dataset_name):
     """Make predictions using a saved model."""
     config = get_config(dataset_name)
-    if not config:
-        print(f"Dataset {dataset_name} not found in configuration.")
-        return
-
-    # Load the saved model
     pipeline = load_model(dataset_name)
     if not pipeline:
         return
 
-    print(f"=== Prediction Phase for {dataset_name} ===")
+    print(f"\n=== Making Predictions for Dataset: {dataset_name} ===")
     test = load_data(config["TEST_PATH"])
     test = remove_irrelevant_sensors(test, config["TO_REMOVE"])
     sensor_cols = [col for col in config["COLUMNS_TO_SCALE"] if 'sensor' in col]
@@ -100,26 +91,58 @@ def predict_with_saved_model(dataset_name):
 
 def run_exploratory_analysis(dataset_name):
     """Run exploratory data analysis for a specific dataset."""
-    print(f"=== Exploratory Data Analysis for {dataset_name} ===")
+    print(f"\n=== Running Exploratory Data Analysis for Dataset: {dataset_name} ===")
     explore_dataset(dataset_name)
 
+def display_menu():
+    """Display the main menu and handle user input."""
+    while True:
+        print("\n=== Main Menu ===")
+        print("1. Train Models")
+        print("2. Make Predictions")
+        print("3. Run Exploratory Data Analysis")
+        print("4. Exit")
+        choice = input("Enter your choice (1-4): ")
+
+        if choice == "1":
+            print("\nAvailable datasets for training:")
+            print(", ".join(DATASETS.keys()))
+            dataset_names = input("Enter the dataset names to train on (comma-separated): ").split(",")
+            for dataset_name in dataset_names:
+                dataset_name = dataset_name.strip()
+                if dataset_name in DATASETS:
+                    train_and_evaluate(dataset_name)
+                else:
+                    print(f"Invalid dataset name: {dataset_name}")
+
+        elif choice == "2":
+            print("\nAvailable datasets for prediction:")
+            print(", ".join(DATASETS.keys()))
+            dataset_names = input("Enter the dataset names to predict on (comma-separated): ").split(",")
+            for dataset_name in dataset_names:
+                dataset_name = dataset_name.strip()
+                if dataset_name in DATASETS:
+                    predict_with_saved_model(dataset_name)
+                else:
+                    print(f"Invalid dataset name: {dataset_name}")
+
+        elif choice == "3":
+            print("\nAvailable datasets for exploratory data analysis:")
+            print(", ".join(DATASETS.keys()))
+            dataset_names = input("Enter the dataset names to analyze (comma-separated): ").split(",")
+            for dataset_name in dataset_names:
+                dataset_name = dataset_name.strip()
+                if dataset_name in DATASETS:
+                    run_exploratory_analysis(dataset_name)
+                else:
+                    print(f"Invalid dataset name: {dataset_name}")
+
+        elif choice == "4":
+            print("Exiting the program. Goodbye!")
+            break
+
+        else:
+            print("Invalid choice. Please enter a number between 1 and 4.")
+
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python main.py <mode> <dataset_name1> <dataset_name2> ...")
-        print("Modes: explore, train, predict")
-        print("Example: python main.py explore FD001 FD002")
-        print("Example: python main.py train FD001 FD002")
-        print("Example: python main.py predict FD001")
-    else:
-        mode = sys.argv[1]
-        dataset_names = sys.argv[2:]
-        if mode not in ["explore", "train", "predict"]:
-            raise ValueError(f"Invalid mode: {mode}. Use 'explore', 'train', or 'predict'.")
-        for dataset_name in dataset_names:
-            print(f"\n=== Processing {dataset_name} ===")
-            if mode == "explore":
-                run_exploratory_analysis(dataset_name)
-            elif mode == "train":
-                train_and_evaluate(dataset_name)
-            elif mode == "predict":
-                predict_with_saved_model(dataset_name)
+    display_menu()
