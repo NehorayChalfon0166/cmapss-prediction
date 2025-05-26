@@ -1,0 +1,35 @@
+# Ignore datasets
+data/
+*.csv
+*.xlsx
+
+# Ignore models
+models/
+*.pkl
+*.h5
+
+# Ignore generated images
+images/
+*.png
+*.jpg
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore environment-specific files
+.vscode/
+.idea/
+
+# Ignore logs
+*.log
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore virtual environments
+venv/
+.env/
+
+# Ignore exploration outputs
+exploration_outputs/
