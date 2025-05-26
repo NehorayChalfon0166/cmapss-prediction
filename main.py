@@ -5,6 +5,7 @@ from src.feature_engineering import add_rolling_features, calculate_rul
 from src.model import build_pipeline
 from src.evaluation import evaluate
 from src.visualization import plot_results
+from src.data_exploration import explore_dataset
 import pandas as pd
 import pickle
 import os
@@ -97,20 +98,28 @@ def predict_with_saved_model(dataset_name):
     print(f"Predictions for {dataset_name}:")
     print(y_pred)
 
+def run_exploratory_analysis(dataset_name):
+    """Run exploratory data analysis for a specific dataset."""
+    print(f"=== Exploratory Data Analysis for {dataset_name} ===")
+    explore_dataset(dataset_name)
+
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage: python main.py <mode> <dataset_name1> <dataset_name2> ...")
-        print("Modes: train, predict")
+        print("Modes: explore, train, predict")
+        print("Example: python main.py explore FD001 FD002")
         print("Example: python main.py train FD001 FD002")
         print("Example: python main.py predict FD001")
     else:
         mode = sys.argv[1]
         dataset_names = sys.argv[2:]
-        if mode not in ["train", "predict"]:
-            raise ValueError(f"Invalid mode: {mode}. Use 'train' or 'predict'.")
+        if mode not in ["explore", "train", "predict"]:
+            raise ValueError(f"Invalid mode: {mode}. Use 'explore', 'train', or 'predict'.")
         for dataset_name in dataset_names:
             print(f"\n=== Processing {dataset_name} ===")
-            if mode == "train":
+            if mode == "explore":
+                run_exploratory_analysis(dataset_name)
+            elif mode == "train":
                 train_and_evaluate(dataset_name)
             elif mode == "predict":
                 predict_with_saved_model(dataset_name)
