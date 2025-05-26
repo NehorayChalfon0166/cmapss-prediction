@@ -6,6 +6,9 @@ RUL_CAP = 125
 ALL_SENSORS = [f'sensor_{i}' for i in range(1, 22)]
 OP_SETTINGS = ['op_setting_1', 'op_setting_2', 'op_setting_3']
 
+# Define column names for the dataset
+COLUMN_NAMES = ['unit_id', 'cycle'] + OP_SETTINGS + ALL_SENSORS
+
 # Define sensors to remove
 LOW_VARIANCE_SENSORS = ['sensor_1', 'sensor_5', 'sensor_6', 'sensor_10', 'sensor_16', 'sensor_18', 'sensor_19']
 HIGHLY_CORRELATED_SENSORS = ['sensor_11', 'sensor_12', 'sensor_13', 'sensor_9', 'sensor_21']

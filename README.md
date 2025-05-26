@@ -185,11 +185,6 @@ COLUMNS_TO_SCALE: List of columns (original sensors and operational settings) to
 MSE = XXX.XX
 RMSE = XX.XX
 R² score = 0.XXXX
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-IGNORE_WHEN_COPYING_END
 
 A plot showing "Predicted vs Actual RUL" will also be displayed.
 
