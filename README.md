@@ -1,6 +1,6 @@
 # Predictive Maintenance: Turbofan Engine RUL Prediction
 
-This project implements a machine learning pipeline to predict the Remaining Useful Life (RUL) of turbofan engines using the NASA C-MAPSS (Commercial Modular Aero-Propulsion System Simulation) dataset. The current implementation primarily focuses on the FD001 subset.
+This project implements a machine learning pipeline to predict the Remaining Useful Life (RUL) of turbofan engines using the NASA C-MAPSS (Commercial Modular Aero-Propulsion System Simulation) dataset. It supports multiple datasets from C-MAPSS (FD001-FD004), features a configurable pipeline, and allows for training, evaluation, and data exploration via a user-friendly interface.
 
 ## Table of Contents
 
@@ -9,67 +9,82 @@ This project implements a machine learning pipeline to predict the Remaining Use
 - [Dataset](#dataset)
 - [Project Structure](#project-structure)
 - [Setup & Installation](#setup--installation)
+- [Configuration](#configuration)
 - [Usage](#usage)
-  - [Data Exploration](#data-exploration)
-  - [Training and Prediction](#training-and-prediction)
-  - [Configuration](#configuration)
+  - [Interactive Menu](#interactive-menu)
+  - [Command-Line Interface (CLI)](#command-line-interface-cli)
+  - [Modes of Operation](#modes-of-operation)
 - [Methodology](#methodology)
-- [Results](#results)
+- [Outputs](#outputs)
 - [Future Work & Enhancements](#future-work--enhancements)
 - [License](#license)
 
 ## Overview
 
-Predictive maintenance is crucial for reducing operational costs and enhancing the safety of complex machinery like aircraft engines. This project aims to predict the RUL of turbofan engines by analyzing sensor data collected during their operation. A Random Forest Regressor model is trained on historical data to make these predictions.
+Predictive maintenance is crucial for reducing operational costs and enhancing the safety of complex machinery like aircraft engines. This project aims to predict the RUL of turbofan engines by analyzing sensor data collected during their operation. A Random Forest Regressor model is trained on historical data from one or more of the C-MAPSS datasets (FD001, FD002, FD003, FD004) to make these predictions. The pipeline is designed to be configurable and extensible.
 
 ## Features
 
-*   **Data Loading & Preprocessing:** Loads and preprocesses the turbofan engine sensor data.
-*   **Irrelevant Sensor Removal:** Removes sensors identified as low-variance or highly correlated based on initial analysis (configurable).
+*   **Multi-Dataset Support:** Handles all four C-MAPSS datasets (FD001, FD002, FD003, FD004).
+*   **Configurable Pipeline:** Key parameters (file paths, window sizes, sensors to remove/scale, RUL cap) are managed in a central configuration file (`config/config.py`).
+*   **Data Loading & Preprocessing:** Loads and preprocesses turbofan engine sensor data for specified datasets.
+*   **Irrelevant Sensor Removal:** Removes sensors identified as low-variance or highly correlated based on configurations in `config.py`.
 *   **Feature Engineering:**
     *   Calculates rolling window statistics (mean, standard deviation) for sensor readings.
     *   Computes the Remaining Useful Life (RUL) for training data, with an option to cap the maximum RUL.
 *   **Model Training:**
     *   Uses a `scikit-learn` pipeline.
-    *   Applies `StandardScaler` to selected features.
+    *   Applies `StandardScaler` to selected features (operational settings, original sensors, and their rolling statistics).
     *   Trains a `RandomForestRegressor` model.
-*   **Evaluation:** Evaluates the model's performance using Mean Squared Error (MSE), Root Mean Squared Error (RMSE), and R² score.
-*   **Visualization:** Plots predicted RUL against actual RUL.
-*   **Data Exploration:** Includes a separate script (`data_exploration.py`) for initial exploratory data analysis (EDA) on the training data, generating summaries and visualizations.
-*   **Configurable Pipeline:** Key parameters (file paths, window sizes, sensors to remove/scale, RUL cap) are managed in a central configuration file (`config/config.py`).
+    *   Saves trained models for each dataset to the `models/` directory.
+*   **Model Evaluation:**
+    *   Loads saved models.
+    *   Prepares test data by taking the last cycle for each engine unit.
+    *   Evaluates the model's performance using Mean Squared Error (MSE), Root Mean Squared Error (RMSE), and R² score.
+*   **Visualization:** Plots predicted RUL against actual RUL for evaluation.
+*   **Data Exploration:** Includes functionality (`src/data_exploration.py`, accessible via `main.py`) for initial exploratory data analysis (EDA) on training data, generating:
+    *   Dataset summaries and info.
+    *   Correlation heatmaps.
+    *   Lists of highly correlated feature pairs.
+    *   Distribution plots for each sensor.
+    *   EDA outputs are saved to `exploration_outputs/<dataset_name>/`.
+*   **User Interface:** Offers both an interactive menu and command-line arguments for running different project tasks (train, evaluate, explore).
 
 ## Dataset
 
 This project uses the **NASA Turbofan Engine Degradation Simulation Data Set (C-MAPSS)**.
 The dataset consists of multivariate time series data from simulated turbofan engines under different operational conditions and fault modes.
 
-*   **Subsets:** The full dataset includes four subsets (FD001, FD002, FD003, FD004), each with its own training and test data. The test data trajectories end some time prior to system failure.
-*   **Current Implementation:** This project's `main.py` and `config.py` are primarily set up for the **FD001** subset.
-*   **Data Files for FD001:**
+*   **Subsets:** The full dataset includes four subsets (FD001, FD002, FD003, FD004), each with its own training and test data, and ground truth RUL for the test data. This project is configured to work with all four.
+*   **Data Files Required (per subset, e.g., FD001):**
     *   `train_FD001.txt`: Training data.
-    *   `test_FD001.txt`: Test data.
+    *   `test_FD001.txt`: Test data (trajectories end prior to failure).
     *   `RUL_FD001.txt`: Ground truth RUL values for the test data.
 
-You can download the dataset from the NASA Prognostics Data Repository: [C-MAPSS Data Set](https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/#turbofan)
-
+You can download the dataset from the NASA Prognostics Data Repository: [C-MAPSS Data Set](https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/#turbofan) (look for "Damage Propagation Modeling" or similar zip file containing the text files).
 
 ## Project Structure
 
-.
+
+CMAPSS-PREDICTION/
 ├── config/
-│ └── config.py # Configuration file for paths, parameters
-├── data/ # To store dataset files
-├── exploration_outputs/ # Created by data_exploration.py and Stores EDA plots
+│ ├── init.py
+│ └── config.py # Configuration file for paths, parameters, dataset-specific settings
+├── data/ # (Gitignored) Store dataset files here (e.g., train_FD001.txt)
+├── exploration_outputs/ # (Gitignored) Stores EDA plots, organized by dataset
+├── models/ # (Gitignored) Stores trained .pkl model files, organized by dataset
 ├── src/
+│ ├── init.py
+│ ├── data_exploration.py # Functions for exploratory data analysis
 │ ├── data_processing.py # Functions for loading and initial data cleaning
 │ ├── evaluation.py # Functions for model evaluation
 │ ├── feature_engineering.py# Functions for creating new features
 │ ├── model.py # Function to build the ML pipeline
 │ └── visualization.py # Functions for plotting results
-├── data_exploration.py # Script for exploratory data analysis
-├── main.py # Main script to run the training and prediction pipeline
-├── requirements.txt # Python dependencies
-└── README.md # This file
+├── .gitignore # Specifies intentionally untracked files
+├── main.py # Main script to run training, evaluation, and exploration
+├── README.md # This file
+└── requirements.txt # Python dependencies
 
 ## Setup & Installation
 
@@ -78,10 +93,13 @@ You can download the dataset from the NASA Prognostics Data Repository: [C-MAPSS
     *   pip
 
 2.  **Clone the repository:**
+    ```bash
     git clone <your-repository-url>
-    cd <repository-name>
+    cd CMAPSS-PREDICTION
+    ```
 
 3.  **Create and activate a virtual environment (recommended):**
+    ```bash
     # For Windows
     python -m venv venv
     venv\Scripts\activate
@@ -89,121 +107,197 @@ You can download the dataset from the NASA Prognostics Data Repository: [C-MAPSS
     # For macOS/Linux
     python3 -m venv venv
     source venv/bin/activate
+    ```
 
 4.  **Install dependencies:**
+    ```bash
     pip install -r requirements.txt
+    ```
 
 5.  **Download the Dataset:**
     *   Download the C-MAPSS dataset (e.g., "Damage Propagation Modeling" zip file) from the link provided in the [Dataset](#dataset) section.
     *   Extract the files.
-    *   Create a `data/` directory in the project root.
-    *   Copy the relevant data files (e.g., `train_FD001.txt`, `test_FD001.txt`, `RUL_FD001.txt`) into the `data/` directory.
-        *Ensure the file paths in `config/config.py` match the location and names of your data files.*
+    *   Create a `data/` directory in the project root if it doesn't exist.
+    *   Copy the relevant data files (e.g., `train_FD001.txt`, `test_FD001.txt`, `RUL_FD001.txt`, and similarly for FD002, FD003, FD004) into the `data/` directory.
+    *   *Ensure the file paths in `config/config.py` under the `DATASETS` dictionary match the location and names of your data files.*
 
-## Usage
-
-### Data Exploration
-
-The `data_exploration.py` script can be used to perform an initial analysis of the training data.
-
-This script will:
-
-Print summary statistics and info about the dataset.
-
-Generate and save a correlation heatmap to exploration_outputs/correlation_heatmap.png.
-
-Identify and print highly correlated feature pairs.
-
-Generate and save distribution plots for each sensor to the exploration_outputs/ directory.
-
-## Training and Prediction
-
-The main pipeline for training the RUL prediction model and evaluating it on the test set is run using main.py.
-
-This script will:
-
-Load and preprocess the training data.
-
-Perform feature engineering (rolling features, RUL calculation).
-
-Train the RandomForestRegressor model.
-
-Load and preprocess the test data.
-
-Make RUL predictions on the test data.
-
-Load the true RUL values.
-
-Evaluate the predictions and print MSE, RMSE, and R² scores.
-
-Display a scatter plot of predicted vs. actual RUL.
+6.  **Create Output Directories (if not automatically created by the script on first run):**
+    The scripts will attempt to create these, but you can pre-create them:
+    ```bash
+    mkdir models
+    mkdir exploration_outputs
+    ```
+    These directories are listed in `.gitignore`.
 
 ## Configuration
 
-Most parameters of the pipeline can be adjusted in `config/config.py`:
+The primary configuration for the project is located in `config/config.py`. This file allows you to customize various aspects of the pipeline:
 
-WINDOW_SIZE: Size of the rolling window for feature engineering.
+*   `WINDOW_SIZE`: Size of the rolling window for feature engineering.
+*   `RUL_CAP`: Maximum value to cap the RUL in the training data.
+*   `DATASETS`: A dictionary defining configurations for each C-MAPSS subset (FD001-FD004).
+    *   `TRAIN_PATH`, `TEST_PATH`, `RUL_PATH`: Paths to the dataset files.
+    *   `LOW_VARIANCE_SENSORS`: List of sensors to remove due to low variance (can be customized per dataset if needed, though currently shared).
+    *   `HIGHLY_CORRELATED_SENSORS`: List of sensors to remove due to high correlation with other sensors.
+*   `get_config(dataset_name)`: A helper function that consolidates settings for a specific dataset, determining `TO_REMOVE` (sensors to drop) and `COLUMNS_TO_SCALE` (features for `StandardScaler`).
 
-RUL_CAP: Maximum value to cap the RUL.
+## Usage
 
-TRAIN_PATH, TEST_PATH, RUL_PATH: Paths to the dataset files.
+The project can be primarily interacted with via `main.py`, which offers an interactive menu or accepts command-line arguments.
 
-TO_REMOVE: List of sensors to remove before feature engineering and scaling.
+### Interactive Menu
 
-COLUMNS_TO_SCALE: List of columns (original sensors and operational settings) to be scaled.
+To use the interactive menu, run `main.py` without any arguments:
 
-## Methodology
+```bash
+python main.py
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+IGNORE_WHEN_COPYING_END
 
-1. Data Loading: Training and test datasets are loaded. Column names are assigned as per the dataset description.
+You will be presented with the following options:
 
-2. Sensor Pruning: Irrelevant sensors (low variance or highly correlated, identified via EDA and configured in config.py) are removed.
+Train Models: Select this to train models. You'll be prompted to enter comma-separated dataset names (e.g., FD001,FD002).
 
-3. Feature Engineering:
+Evaluate Models: Select this to evaluate previously trained models. You'll be prompted for dataset names.
 
-    * Rolling Statistics: For each relevant sensor, rolling mean and standard deviation are calculated over a specified window for each unit.
+Run Exploratory Data Analysis: Select this to perform EDA on specified datasets.
 
-    * RUL Calculation (Training Data): The RUL for each cycle in the training data is calculated as the difference between the maximum cycle for that unit and the current cycle. This RUL is then capped at a predefined value (RUL_CAP).
+Exit: Close the program.
 
-4. Data Splitting:
+Command-Line Interface (CLI)
 
-    * Training set: Features (sensor readings, operational settings, engineered rolling features) and the target RUL.
+You can also run specific tasks directly from the command line:
 
-    * Test set: The last cycle of data for each unit is used for prediction, as per typical C-MAPSS evaluation.
+python main.py <mode> <dataset_name1> [<dataset_name2> ...]
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+Bash
+IGNORE_WHEN_COPYING_END
 
-5. Model Pipeline:
+<mode>: Specifies the operation to perform.
 
-    * A ColumnTransformer applies StandardScaler only to specified sensor columns and their derived rolling features.
+<dataset_nameX>: One or more dataset names (e.g., FD001, FD004).
 
-    * A RandomForestRegressor is used as the prediction model.
+Modes of Operation
 
-6. Prediction: The trained pipeline predicts RUL for the prepared test data.
+train: Trains a model for each specified dataset and saves it to models/<dataset_name>_model.pkl.
 
-7. Evaluation: Predictions are compared against the true RUL values using MSE, RMSE, and R² score. A scatter plot visualizes the prediction accuracy.
+python main.py train FD001 FD003
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+Bash
+IGNORE_WHEN_COPYING_END
 
-## Results
+evaluate: Loads a pre-trained model for each specified dataset, predicts RUL on its test set, and prints evaluation metrics (MSE, RMSE, R²), then displays a predicted vs. actual RUL plot.
 
-MSE = XXX.XX
-RMSE = XX.XX
-R² score = 0.XXXX
+python main.py evaluate FD001
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+Bash
+IGNORE_WHEN_COPYING_END
 
-A plot showing "Predicted vs Actual RUL" will also be displayed.
+explore: Runs exploratory data analysis for each specified dataset. This includes printing summary statistics, and generating/saving correlation heatmaps and sensor distribution plots to exploration_outputs/<dataset_name>/.
 
-## Future Work & Enhancements
+python main.py explore FD001 FD002
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+Bash
+IGNORE_WHEN_COPYING_END
 
-Generalize for all C-MAPSS Datasets (FD001-FD004):
+Note on Standalone EDA Script:
+The EDA logic resides in src/data_exploration.py. While main.py provides a convenient way to trigger it, you can also run it directly (e.g., for development or specific analysis on one dataset) if you navigate to the src directory or adjust Python's path:
 
-Modify config.py and main.py to easily switch between or iterate over the FD001, FD002, FD003, and FD004 datasets. This will likely involve different configurations for TO_REMOVE and COLUMNS_TO_SCALE for each dataset.
+# From the project root directory
+python -m src.data_exploration FD001
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+Bash
+IGNORE_WHEN_COPYING_END
+Methodology
 
-Update data_exploration.py to accept dataset choice as an argument.
+Configuration Loading: For a given dataset (e.g., FD001), its specific configuration (file paths, sensors to remove, columns to scale) is loaded from config/config.py.
+
+Data Loading: Training and test datasets are loaded using pandas. Column names are assigned based on the C-MAPSS dataset description.
+
+Sensor Pruning: Irrelevant sensors (as defined by LOW_VARIANCE_SENSORS and HIGHLY_CORRELATED_SENSORS in config.py for the chosen dataset) are removed.
+
+Feature Engineering:
+
+Rolling Statistics: For selected sensor columns, rolling mean and standard deviation are calculated over a specified WINDOW_SIZE for each engine unit. These become new features.
+
+RUL Calculation (Training Data): The RUL for each cycle in the training data is calculated as the difference between the maximum cycle for that unit and the current cycle. This RUL is then optionally capped at RUL_CAP.
+
+Data Preparation for Model:
+
+Training Set: Features include operational settings, selected original sensor readings, and their engineered rolling features. The target is the calculated RUL.
+
+Test Set: For RUL prediction on the test set, data for each engine unit is processed similarly to the training data (sensor pruning, rolling features). The final instance (last recorded cycle) for each unit in the test set is used for prediction, as is standard for C-MAPSS evaluation.
+
+Model Pipeline:
+
+A ColumnTransformer applies StandardScaler to a defined list of columns (COLUMNS_TO_SCALE from config, which includes operational settings, kept original sensors, and their rolling features). Other columns are passed through.
+
+A RandomForestRegressor is used as the prediction model.
+
+Training: The pipeline is trained on the prepared training data. Trained models are saved to models/<dataset_name>_model.pkl.
+
+Prediction & Evaluation:
+
+The trained pipeline (loaded from file) predicts RUL for the prepared test data.
+
+Predictions are compared against the true RUL values (from RUL_FDxxx.txt, also capped by RUL_CAP for consistency) using Mean Squared Error (MSE), Root Mean Squared Error (RMSE), and R² score.
+
+A scatter plot visualizes predicted vs. actual RUL.
+
+Outputs
+
+Trained Models: Saved as .pkl files in the models/ directory, named models/<dataset_name>_model.pkl.
+
+Evaluation Metrics: MSE, RMSE, and R² scores are printed to the console during the evaluate mode.
+
+Prediction Plots: A scatter plot of "Predicted vs Actual RUL" is displayed during the evaluate mode for each dataset.
+
+Exploratory Data Analysis (EDA) Results:
+
+Summary statistics printed to the console.
+
+Plots (correlation heatmap, sensor distributions) saved as PNG files in exploration_outputs/<dataset_name>/.
+
+Future Work & Enhancements
+
+Generalize Configuration: Further refine config.py to allow more distinct configurations per dataset (FD001-FD004) if initial EDA suggests different sensors should be removed/scaled for optimal performance on each.
 
 Hyperparameter Tuning: Implement techniques like GridSearchCV or RandomizedSearchCV to find optimal hyperparameters for the RandomForestRegressor (or other models).
 
-Advanced Models: Experiment with other regression models (e.g., Gradient Boosting, XGBoost, LightGBM, Neural Networks like LSTMs or Transformers suited for time series).
+Advanced Models: Experiment with other regression models (e.g., Gradient Boosting, XGBoost, LightGBM) or neural networks (LSTMs, Transformers) suitable for time series data.
 
 Cross-Validation: Implement robust cross-validation strategies suitable for time-series data, especially when generalizing to all datasets.
 
-Dynamic Sensor Selection: Implement automated methods for selecting relevant sensors based on statistical properties or feature importance scores.
+Dynamic Sensor Selection: Implement automated methods for selecting relevant sensors based on statistical properties or feature importance scores from models.
 
-Error Analysis: Perform a more in-depth analysis of prediction errors to understand where the model performs poorly.
+Error Analysis: Perform a more in-depth analysis of prediction errors to understand where the model performs poorly (e.g., for specific units, or at different stages of degradation).
 
-Saving and Loading Models: Add functionality to save trained models and load them for later use.
+Improved Test Set Handling: Explore using more of the test set history for prediction if applicable models (like LSTMs) are used, rather than just the last cycle.
+
+License
+
+This project is unlicensed. (Or specify your license, e.g., MIT License).
+
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+IGNORE_WHEN_COPYING_END
